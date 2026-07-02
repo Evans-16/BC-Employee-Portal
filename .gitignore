@@ -1,0 +1,14 @@
+# --- VS Code ---
+.vscode/
+
+# --- Business Central (AL) ---
+.alpackages/
+.snapshots/
+*.app
+
+# --- .NET Backend ---
+backend/bin/
+backend/obj/
+
+# --- Frontend (If it uses Node.js) ---
+node_modules/
