@@ -10,5 +10,6 @@
 backend/bin/
 backend/obj/
 
-# --- Frontend (If it uses Node.js) ---
-node_modules/
+# --- Frontend ---
+frontend/.next/
+frontend/node_modules/

@@ -2,29 +2,34 @@ using EmployeePortal.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register MVC Controllers
-builder.Services.AddControllers();
+// ── Service registrations ─────────────────────────────────────────────────────
 
-// Register HttpClient factory
+builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 
-// Register our Business Central service (scoped = one per request)
+// Scoped = one instance per HTTP request (correct for stateless API calls to BC)
 builder.Services.AddScoped<IBcService, BcService>();
 
-// Enable CORS for the Next.js frontend on port 3000
+// Singleton = one instance for the app lifetime (stateless, safe to share)
+builder.Services.AddSingleton<IPasswordService, PasswordService>();
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Allows the Next.js frontend on port 3000 to call this API during development.
+// Restrict this to your production domain before going live.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNextjs",
-        policy => policy.WithOrigins("http://localhost:3000")
-                        .AllowAnyMethod()
-                        .AllowAnyHeader());
+        policy => policy
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyMethod()
+            .AllowAnyHeader());
 });
+
+// ── App pipeline ──────────────────────────────────────────────────────────────
 
 var app = builder.Build();
 
 app.UseCors("AllowNextjs");
-
-// Map all [ApiController] routes automatically
 app.MapControllers();
 
 app.Run();

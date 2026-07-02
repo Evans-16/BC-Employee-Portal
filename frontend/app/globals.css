@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  /* Custom Theme Colors */
+  --color-navy: #1B3A6B;
+  --color-navy-light: #254d8f;
+  --color-navy-dark: #122647;
+
+  --color-brand: #2563EB;
+  --color-brand-light: #3B82F6;
+  --color-brand-subtle: #E8F0FE;
+
+  /* Custom Font Family */
+  --font-sans: "Inter", "system-ui", "sans-serif";
+}
