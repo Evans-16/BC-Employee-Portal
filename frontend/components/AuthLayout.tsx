@@ -13,7 +13,7 @@ export default function AuthLayout({ title, subtitle, children, footer }: Props)
     <div className="min-h-screen bg-brand-subtle flex flex-col">
 
       {/* Top navy strip */}
-      <div className="h-1.5 bg-gradient-to-r from-navy via-brand to-blue-400" />
+      <div className="h-1.5 bg-linear-to-r from-navy via-brand to-blue-400" />
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-12">
 

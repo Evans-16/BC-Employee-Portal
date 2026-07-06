@@ -69,8 +69,8 @@ export default function LoginPage() {
             id="employeeNo"
             name="employeeNo"
             type="text"
-            autoComplete="username"
-            placeholder="e.g. EMP-001"
+            autoComplete = "username"
+            placeholder = "e.g. SH"
             value={form.employeeNo}
             onChange={handleChange}
             required
