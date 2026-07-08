@@ -38,12 +38,15 @@ export default function SignupPage() {
       if (res.success && res.data) {
         const d = res.data as any;
         setEmployee({
-          employeeNo: d.employeeNo,
-          firstName:  d.firstName,
-          lastName:   d.lastName,
-          email:      d.email,
-          jobTitle:   d.jobTitle,
-          phoneNo:    d.phoneNo,
+          employeeNo:     d.employeeNo,
+          firstName:      d.firstName,
+          lastName:       d.lastName,
+          email:          d.email,
+          jobTitle:       d.jobTitle,
+          phoneNo:        d.phoneNo,
+          gender:         d.gender,
+          employmentType: d.employmentType,
+          status:         d.status,
         });
         router.push("/dashboard");
       } else {

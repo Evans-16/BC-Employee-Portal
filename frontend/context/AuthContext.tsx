@@ -8,6 +8,9 @@ export interface Employee {
   email: string;
   jobTitle: string;
   phoneNo: string;
+  gender: string;
+  employmentType: string;
+  status: string;
 }
 
 interface AuthCtx {

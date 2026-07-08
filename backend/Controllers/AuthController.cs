@@ -5,7 +5,7 @@ using EmployeePortal.Services;
 namespace EmployeePortal.Controllers;
 
 /// <summary>
-/// Authentication flows: signup, login, logout, change-password.
+/// Authentication flows: signup, login, logout, change-password, forgot-password.
 /// Base route: /api/auth
 /// </summary>
 [ApiController]
@@ -22,14 +22,6 @@ public class AuthController : ControllerBase
     }
 
     // ── POST /api/auth/signup ────────────────────────────────────────────────
-    //
-    // Flow:
-    //   1. Verify employee exists in BC
-    //   2. Reject if already registered (Portal_Password_Hash is not blank)
-    //   3. Hash the password
-    //   4. PATCH Portal_Password_Hash + Portal_Active = true in one call
-    //   5. Return the same AuthData shape as login so the frontend can
-    //      automatically log the user in right after signup
     [HttpPost("signup")]
     public async Task<IActionResult> Signup([FromBody] SignupRequest req)
     {
@@ -44,7 +36,6 @@ public class AuthController : ControllerBase
         {
             var employee = await _bc.GetEmployeeByNoAsync(req.EmployeeNo);
 
-            // Don't reveal whether the employee number exists — use a generic message
             if (employee is null)
                 return NotFound(ApiResponse.Fail(
                     "No employee record found for that Employee Number. Please contact HR."));
@@ -52,18 +43,14 @@ public class AuthController : ControllerBase
             var root         = employee.Value;
             string storedHash = GetString(root, "Portal_Password_Hash");
 
-            // Already registered — hash is not blank
             if (!string.IsNullOrWhiteSpace(storedHash))
                 return Conflict(ApiResponse.Fail(
                     "This Employee Number is already registered. Please log in instead."));
 
-            // Hash the password and write it to BC, flipping Portal_Active on at the same time
             string newHash = _pwd.Hash(req.Password);
             string etag    = await _bc.GetEtagAsync(req.EmployeeNo);
             await _bc.RegisterEmployeeAsync(req.EmployeeNo, newHash, etag);
 
-            // Build the auth response from the record we already have
-            // (no extra GET needed — we only just read it above)
             var data = BuildAuthData(req.EmployeeNo, root);
 
             return StatusCode(201, ApiResponse<AuthData>.Ok(
@@ -92,15 +79,13 @@ public class AuthController : ControllerBase
 
             var root = employee.Value;
 
-            string storedHash    = GetString(root, "Portal_Password_Hash");
+            string storedHash     = GetString(root, "Portal_Password_Hash");
             bool   isPortalActive = root.TryGetProperty("Portal_Active", out var ap) && ap.GetBoolean();
 
-            // Account exists in BC but has never been registered through the portal
             if (string.IsNullOrWhiteSpace(storedHash))
                 return Unauthorized(ApiResponse.Fail(
                     "No portal account found. Please sign up first."));
 
-            // HR-deactivated account (e.g. suspended or offboarded)
             if (!isPortalActive)
                 return StatusCode(403, ApiResponse.Fail(
                     "Your portal account is not active. Please contact HR."));
@@ -117,9 +102,6 @@ public class AuthController : ControllerBase
     }
 
     // ── POST /api/auth/logout ────────────────────────────────────────────────
-    // Stateless — the server has nothing to invalidate right now.
-    // The frontend clears its token/session on receiving this 200.
-    // When you add JWT later, add the token to a blacklist here.
     [HttpPost("logout")]
     public IActionResult Logout()
     {
@@ -127,6 +109,7 @@ public class AuthController : ControllerBase
     }
 
     // ── PUT /api/auth/change-password ────────────────────────────────────────
+    // Requires the CURRENT password — used from inside the dashboard.
     [HttpPut("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
     {
@@ -158,7 +141,6 @@ public class AuthController : ControllerBase
 
             string storedHash = GetString(root, "Portal_Password_Hash");
 
-            // Guard: can't change password if never registered
             if (string.IsNullOrWhiteSpace(storedHash))
                 return BadRequest(ApiResponse.Fail(
                     "No portal account found. Please sign up first."));
@@ -178,17 +160,79 @@ public class AuthController : ControllerBase
         }
     }
 
+    // ── PUT /api/auth/forgot-password ────────────────────────────────────────
+    // Doesn't require the current password. Instead verifies identity via
+    // Employee Number + National ID (BC's Social_Security_No field), since
+    // there's no email/SMS service wired up yet to send a reset link/code.
+    //
+    // Deliberately returns the SAME generic error whether the employee
+    // doesn't exist or the National ID doesn't match — this avoids leaking
+    // which Employee Numbers are valid to someone probing the endpoint.
+    [HttpPut("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.EmployeeNo) ||
+            string.IsNullOrWhiteSpace(req.NationalId) ||
+            string.IsNullOrWhiteSpace(req.NewPassword))
+            return BadRequest(ApiResponse.Fail(
+                "Employee number, National ID, and new password are all required."));
+
+        if (req.NewPassword.Length < 8)
+            return BadRequest(ApiResponse.Fail("New password must be at least 8 characters."));
+
+        const string genericFailure = "Employee Number and National ID do not match our records.";
+
+        try
+        {
+            var employee = await _bc.GetEmployeeByNoAsync(req.EmployeeNo);
+
+            if (employee is null)
+                return Unauthorized(ApiResponse.Fail(genericFailure));
+
+            var root = employee.Value;
+
+            string storedHash = GetString(root, "Portal_Password_Hash");
+            if (string.IsNullOrWhiteSpace(storedHash))
+                return BadRequest(ApiResponse.Fail(
+                    "No portal account found for this Employee Number. Please sign up first."));
+
+            bool isPortalActive = root.TryGetProperty("Portal_Active", out var ap) && ap.GetBoolean();
+            if (!isPortalActive)
+                return StatusCode(403, ApiResponse.Fail("Your portal account is not active. Please contact HR."));
+
+            string storedNationalId = GetString(root, "Social_Security_No").Trim();
+            string suppliedNationalId = req.NationalId.Trim();
+
+            if (string.IsNullOrWhiteSpace(storedNationalId) ||
+                !string.Equals(storedNationalId, suppliedNationalId, StringComparison.OrdinalIgnoreCase))
+                return Unauthorized(ApiResponse.Fail(genericFailure));
+
+            string newHash = _pwd.Hash(req.NewPassword);
+            string etag    = await _bc.GetEtagAsync(req.EmployeeNo);
+            await _bc.UpdatePasswordHashAsync(req.EmployeeNo, newHash, etag);
+
+            return Ok(ApiResponse.Ok("Password reset successfully. You can now sign in with your new password."));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse.Fail($"Internal server error: {ex.Message}"));
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static AuthData BuildAuthData(string employeeNo, System.Text.Json.JsonElement root) =>
         new()
         {
-            EmployeeNo = employeeNo,
-            FirstName  = GetString(root, "First_Name"),
-            LastName   = GetString(root, "Last_Name"),
-            Email      = GetString(root, "Company_E_Mail"),
-            JobTitle   = GetString(root, "Job_Title"),
-            PhoneNo    = GetString(root, "Phone_No"),
+            EmployeeNo     = employeeNo,
+            FirstName      = GetString(root, "First_Name"),
+            LastName       = GetString(root, "Last_Name"),
+            Email          = GetString(root, "Company_E_Mail"),
+            JobTitle       = GetString(root, "Job_Title"),
+            PhoneNo        = GetString(root, "Phone_No"),
+            Gender         = GetString(root, "Gender"),
+            EmploymentType = GetString(root, "Engagement_Type"),
+            Status         = GetString(root, "Status"),
         };
 
     private static string GetString(System.Text.Json.JsonElement root, string key) =>

@@ -44,6 +44,14 @@ public class BcService : IBcService
         return JsonDocument.Parse(json).RootElement.Clone();
     }
 
+    /// <summary>
+    /// Returns the RAW etag string, unmodified — either from the response
+    /// header (already correctly parsed by .NET, no "W/" prefix, already
+    /// quoted) or from the JSON body's @odata.etag property (which DOES
+    /// still contain a literal "W/" prefix as plain text, since it's just a
+    /// JSON string value). All the "is it quoted, does it have W/" handling
+    /// happens later in BuildIfMatchHeader — this method just fetches it.
+    /// </summary>
     public async Task<string> GetEtagAsync(string employeeNo)
     {
         using var client = CreateClient();
@@ -51,17 +59,12 @@ public class BcService : IBcService
 
         EnsureSuccess(response, "fetch ETag");
 
-        // Prefer the response header; fall back to the @odata.etag property in the body
         if (response.Headers.ETag?.Tag is { } tag) return tag;
 
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
         if (doc.RootElement.TryGetProperty("@odata.etag", out var etagProp))
-        {
-            var raw = etagProp.GetString();
-            if (!string.IsNullOrEmpty(raw))
-                return NormalizeEtag(raw);
-        }
+            return etagProp.GetString() ?? "*";
 
         return "*"; // wildcard — BC accepts it but skips concurrency checking
     }
@@ -89,11 +92,13 @@ public class BcService : IBcService
     {
         var fields = new Dictionary<string, object?>();
 
-        if (req.FirstName    is not null) fields["First_Name"]    = req.FirstName;
-        if (req.LastName     is not null) fields["Last_Name"]     = req.LastName;
-        if (req.CompanyEmail is not null) fields["Company_E_Mail"] = req.CompanyEmail;
-        if (req.PhoneNo      is not null) fields["Phone_No"]      = req.PhoneNo;
-        if (req.JobTitle     is not null) fields["Job_Title"]     = req.JobTitle;
+        if (req.FirstName      is not null) fields["First_Name"]      = req.FirstName;
+        if (req.LastName       is not null) fields["Last_Name"]       = req.LastName;
+        if (req.CompanyEmail   is not null) fields["Company_E_Mail"]  = req.CompanyEmail;
+        if (req.PhoneNo        is not null) fields["Phone_No"]        = req.PhoneNo;
+        if (req.JobTitle       is not null) fields["Job_Title"]       = req.JobTitle;
+        if (req.Gender         is not null) fields["Gender"]          = req.Gender;
+        if (req.EmploymentType is not null) fields["Engagement_Type"] = req.EmploymentType;
 
         if (fields.Count == 0)
             throw new ArgumentException("No fields provided to update.");
@@ -118,35 +123,6 @@ public class BcService : IBcService
         EnsureSuccess(response, operation);
     }
 
-    // Builds a valid If-Match header value. Falls back to "match any" if the
-    // etag we were given can't be parsed as a valid RFC 7232 quoted string,
-    // instead of letting EntityTagHeaderValue throw and bubble up as a 500.
-    private static EntityTagHeaderValue BuildIfMatchHeader(string etag)
-    {
-        if (etag == "*")
-            return EntityTagHeaderValue.Any;
-
-        try
-        {
-            return new EntityTagHeaderValue(NormalizeEtag(etag));
-        }
-        catch (FormatException)
-        {
-            return EntityTagHeaderValue.Any;
-        }
-    }
-
-    // Ensures the etag is wrapped in literal double quotes as RFC 7232 requires,
-    // so EntityTagHeaderValue doesn't throw "The specified value is not a valid
-    // quoted string." This is needed because BC's @odata.etag JSON property
-    // sometimes comes back without the surrounding quote characters.
-    private static string NormalizeEtag(string raw)
-    {
-        if (raw.StartsWith("W/\"") && raw.EndsWith("\"")) return raw; // weak etag, already fine
-        if (raw.StartsWith("\"") && raw.EndsWith("\""))    return raw; // already fine
-        return $"\"{raw}\"";
-    }
-
     private static HttpClient CreateClient() =>
         new(new HttpClientHandler
         {
@@ -157,6 +133,39 @@ public class BcService : IBcService
     {
         var escaped = employeeNo.Trim().Replace("'", "''"); // OData literal escaping
         return $"{BaseUrl}('{Uri.EscapeDataString(escaped)}')";
+    }
+
+    /// <summary>
+    /// Builds a correct If-Match header from a raw etag string, regardless of
+    /// which shape it arrived in:
+    ///   - "*"                              → match-any
+    ///   - "abc123"                         → unquoted tag, needs quotes added
+    ///   - "\"abc123\""                     → already a valid quoted tag
+    ///   - "W/\"abc123\""                   → weak tag with the "W/" baked in
+    ///                                        as literal text (this is the
+    ///                                        shape that broke before: the
+    ///                                        old code quoted the WHOLE
+    ///                                        string, producing something
+    ///                                        like "\"W/\"abc123\"\"" with
+    ///                                        unescaped inner quotes, which
+    ///                                        .NET rejects).
+    /// The "W/" prefix and the quoted tag are handled as two separate things
+    /// — EntityTagHeaderValue takes the tag and the weak-flag as separate
+    /// constructor arguments, it does NOT want "W/" inside the tag string.
+    /// </summary>
+    private static EntityTagHeaderValue BuildIfMatchHeader(string etag)
+    {
+        if (string.IsNullOrWhiteSpace(etag) || etag == "*")
+            return EntityTagHeaderValue.Any;
+
+        var value  = etag.Trim();
+        bool isWeak = value.StartsWith("W/", StringComparison.OrdinalIgnoreCase);
+        if (isWeak) value = value.Substring(2).Trim();
+
+        if (!value.StartsWith('"')) value = "\"" + value;
+        if (!value.EndsWith('"'))   value = value + "\"";
+
+        return new EntityTagHeaderValue(value, isWeak);
     }
 
     private static void EnsureSuccess(HttpResponseMessage r, string op)

@@ -28,12 +28,15 @@ export default function LoginPage() {
       if (res.success && res.data) {
         const d = res.data as any;
         setEmployee({
-          employeeNo: d.employeeNo,
-          firstName:  d.firstName,
-          lastName:   d.lastName,
-          email:      d.email,
-          jobTitle:   d.jobTitle,
-          phoneNo:    d.phoneNo,
+          employeeNo:     d.employeeNo,
+          firstName:      d.firstName,
+          lastName:       d.lastName,
+          email:          d.email,
+          jobTitle:       d.jobTitle,
+          phoneNo:        d.phoneNo,
+          gender:         d.gender,
+          employmentType: d.employmentType,
+          status:         d.status,
         });
         router.push("/dashboard");
       } else {
@@ -49,7 +52,7 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      subtitle="Sign in to your KNTC Employee Portal account"
+      subtitle="Sign in to your Cronus International ltd. Employee Portal account"
       footer={
         <>
           Don&apos;t have an account?{" "}
@@ -69,8 +72,8 @@ export default function LoginPage() {
             id="employeeNo"
             name="employeeNo"
             type="text"
-            autoComplete = "username"
-            placeholder = "e.g. SH"
+            autoComplete="username"
+            placeholder="e.g. EMP-001"
             value={form.employeeNo}
             onChange={handleChange}
             required
@@ -79,7 +82,15 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="label">Password</label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className="label">Password</label>
+            <Link
+              href="/forgot-password"
+              className="text-xs text-brand font-semibold hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             id="password"
             name="password"

@@ -9,11 +9,13 @@ export default function EditProfilePage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    firstName:    employee?.firstName    ?? "",
-    lastName:     employee?.lastName     ?? "",
-    companyEmail: employee?.email        ?? "",
-    phoneNo:      employee?.phoneNo      ?? "",
-    jobTitle:     employee?.jobTitle     ?? "",
+    firstName:      employee?.firstName      ?? "",
+    lastName:       employee?.lastName       ?? "",
+    companyEmail:   employee?.email          ?? "",
+    phoneNo:        employee?.phoneNo        ?? "",
+    jobTitle:       employee?.jobTitle       ?? "",
+    gender:         employee?.gender         ?? "",
+    employmentType: employee?.employmentType ?? "",
   });
   const [error,   setError]   = useState("");
   const [success, setSuccess] = useState("");
@@ -21,7 +23,9 @@ export default function EditProfilePage() {
 
   if (!employee) return null;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
     setError("");
     setSuccess("");
@@ -34,11 +38,13 @@ export default function EditProfilePage() {
 
     // Only send fields that actually changed
     const patch: Record<string, string> = {};
-    if (form.firstName    !== employee.firstName)  patch.firstName    = form.firstName;
-    if (form.lastName     !== employee.lastName)   patch.lastName     = form.lastName;
-    if (form.companyEmail !== employee.email)      patch.companyEmail = form.companyEmail;
-    if (form.phoneNo      !== employee.phoneNo)    patch.phoneNo      = form.phoneNo;
-    if (form.jobTitle     !== employee.jobTitle)   patch.jobTitle     = form.jobTitle;
+    if (form.firstName      !== employee.firstName)      patch.firstName      = form.firstName;
+    if (form.lastName       !== employee.lastName)       patch.lastName       = form.lastName;
+    if (form.companyEmail   !== employee.email)          patch.companyEmail   = form.companyEmail;
+    if (form.phoneNo        !== employee.phoneNo)        patch.phoneNo        = form.phoneNo;
+    if (form.jobTitle       !== employee.jobTitle)       patch.jobTitle       = form.jobTitle;
+    if (form.gender         !== employee.gender)         patch.gender         = form.gender;
+    if (form.employmentType !== employee.employmentType) patch.employmentType = form.employmentType;
 
     if (Object.keys(patch).length === 0) {
       setError("No changes detected.");
@@ -53,11 +59,14 @@ export default function EditProfilePage() {
         // Update the stored session with fresh data from BC
         setEmployee({
           ...employee,
-          firstName: d.firstName,
-          lastName:  d.lastName,
-          email:     d.email,
-          phoneNo:   d.phoneNo,
-          jobTitle:  d.jobTitle,
+          firstName:      d.firstName,
+          lastName:       d.lastName,
+          email:          d.email,
+          phoneNo:        d.phoneNo,
+          jobTitle:       d.jobTitle,
+          gender:         d.gender,
+          employmentType: d.employmentType,
+          status:         d.status,
         });
         setSuccess("Profile updated successfully.");
       } else {
@@ -109,6 +118,33 @@ export default function EditProfilePage() {
                 value={form.lastName} onChange={handleChange}
                 className="input" required
               />
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="gender" className="label">Gender</label>
+              <select
+                id="gender" name="gender"
+                value={form.gender} onChange={handleChange}
+                className="input"
+              >
+                <option value="">Not specified</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="employmentType" className="label">Employment Type</label>
+              <select
+                id="employmentType" name="employmentType"
+                value={form.employmentType} onChange={handleChange}
+                className="input"
+              >
+                <option value="">Not specified</option>
+                <option value="Full time">Full time</option>
+                <option value="Part time">Part time</option>
+              </select>
             </div>
           </div>
 

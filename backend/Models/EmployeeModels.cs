@@ -42,35 +42,55 @@ public class ChangePasswordRequest
     public string NewPassword     { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Used for "forgot password" — verifies identity via Employee Number +
+/// National ID (BC's Social_Security_No field) instead of requiring the
+/// current password, since the user doesn't have it.
+/// </summary>
+public class ForgotPasswordRequest
+{
+    public string EmployeeNo  { get; set; } = string.Empty;
+    public string NationalId  { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
 public class UpdateEmployeeRequest
 {
     // Only non-null fields are sent to BC — omitted fields are untouched
-    public string? FirstName    { get; set; }
-    public string? LastName     { get; set; }
-    public string? CompanyEmail { get; set; }
-    public string? PhoneNo      { get; set; }
-    public string? JobTitle     { get; set; }
+    public string? FirstName      { get; set; }
+    public string? LastName       { get; set; }
+    public string? CompanyEmail   { get; set; }
+    public string? PhoneNo        { get; set; }
+    public string? JobTitle       { get; set; }
+    public string? Gender         { get; set; }
+    public string? EmploymentType { get; set; } // maps to BC "Engagement Type"
 }
 
 // ─── Outbound response DTOs ──────────────────────────────────────────────────
 
 public class AuthData
 {
-    public string EmployeeNo { get; set; } = string.Empty;
-    public string FirstName  { get; set; } = string.Empty;
-    public string LastName   { get; set; } = string.Empty;
-    public string Email      { get; set; } = string.Empty;
-    public string JobTitle   { get; set; } = string.Empty;
-    public string PhoneNo    { get; set; } = string.Empty;
+    public string EmployeeNo     { get; set; } = string.Empty;
+    public string FirstName      { get; set; } = string.Empty;
+    public string LastName       { get; set; } = string.Empty;
+    public string Email          { get; set; } = string.Empty;
+    public string JobTitle       { get; set; } = string.Empty;
+    public string PhoneNo        { get; set; } = string.Empty;
+    public string Gender         { get; set; } = string.Empty;
+    public string EmploymentType { get; set; } = string.Empty;
+    public string Status         { get; set; } = string.Empty;
 }
 
 public class EmployeeData
 {
-    public string EmployeeNo { get; set; } = string.Empty;
-    public string FirstName  { get; set; } = string.Empty;
-    public string LastName   { get; set; } = string.Empty;
-    public string Email      { get; set; } = string.Empty;
-    public string JobTitle   { get; set; } = string.Empty;
-    public string PhoneNo    { get; set; } = string.Empty;
-    public bool   IsActive   { get; set; }
+    public string EmployeeNo     { get; set; } = string.Empty;
+    public string FirstName      { get; set; } = string.Empty;
+    public string LastName       { get; set; } = string.Empty;
+    public string Email          { get; set; } = string.Empty;
+    public string JobTitle       { get; set; } = string.Empty;
+    public string PhoneNo        { get; set; } = string.Empty;
+    public string Gender         { get; set; } = string.Empty;
+    public string EmploymentType { get; set; } = string.Empty;
+    public string Status         { get; set; } = string.Empty;
+    public bool   IsActive       { get; set; }
 }

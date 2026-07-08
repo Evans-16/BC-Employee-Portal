@@ -57,19 +57,19 @@ public class EmployeesController : ControllerBase
     }
 
     // ── PUT /api/employees/{employeeNo} ──────────────────────────────────────
-    // Only non-null fields in the request body are patched — omitted fields
-    // are left unchanged in BC. The response returns the full updated record.
     [HttpPut("{employeeNo}")]
     public async Task<IActionResult> UpdateEmployee(
         string employeeNo,
         [FromBody] UpdateEmployeeRequest req)
     {
         bool hasAnyField =
-            req.FirstName    is not null ||
-            req.LastName     is not null ||
-            req.CompanyEmail is not null ||
-            req.PhoneNo      is not null ||
-            req.JobTitle     is not null;
+            req.FirstName      is not null ||
+            req.LastName       is not null ||
+            req.CompanyEmail   is not null ||
+            req.PhoneNo        is not null ||
+            req.JobTitle       is not null ||
+            req.Gender         is not null ||
+            req.EmploymentType is not null;
 
         if (!hasAnyField)
             return BadRequest(ApiResponse.Fail("No fields provided to update."));
@@ -108,13 +108,16 @@ public class EmployeesController : ControllerBase
     private static EmployeeData MapToEmployeeData(string employeeNo, System.Text.Json.JsonElement root) =>
         new()
         {
-            EmployeeNo = employeeNo,
-            FirstName  = GetString(root, "First_Name"),
-            LastName   = GetString(root, "Last_Name"),
-            Email      = GetString(root, "Company_E_Mail"),
-            JobTitle   = GetString(root, "Job_Title"),
-            PhoneNo    = GetString(root, "Phone_No"),
-            IsActive   = root.TryGetProperty("Portal_Active", out var ap) && ap.GetBoolean(),
+            EmployeeNo     = employeeNo,
+            FirstName      = GetString(root, "First_Name"),
+            LastName       = GetString(root, "Last_Name"),
+            Email          = GetString(root, "Company_E_Mail"),
+            JobTitle       = GetString(root, "Job_Title"),
+            PhoneNo        = GetString(root, "Phone_No"),
+            Gender         = GetString(root, "Gender"),
+            EmploymentType = GetString(root, "Engagement_Type"),
+            Status         = GetString(root, "Status"),
+            IsActive       = root.TryGetProperty("Portal_Active", out var ap) && ap.GetBoolean(),
         };
 
     private static string GetString(System.Text.Json.JsonElement root, string key) =>

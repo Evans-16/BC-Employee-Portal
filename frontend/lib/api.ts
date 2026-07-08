@@ -38,6 +38,16 @@ export const api = {
       body: JSON.stringify({ employeeNo, currentPassword, newPassword }),
     }),
 
+  forgotPassword: (
+    employeeNo: string,
+    nationalId: string,
+    newPassword: string
+  ) =>
+    request("/api/auth/forgot-password", {
+      method: "PUT",
+      body: JSON.stringify({ employeeNo, nationalId, newPassword }),
+    }),
+
   getEmployee: (employeeNo: string) =>
     request(`/api/employees/${employeeNo}`),
 
@@ -49,6 +59,8 @@ export const api = {
       companyEmail?: string;
       phoneNo?: string;
       jobTitle?: string;
+      gender?: string;
+      employmentType?: string;
     }
   ) =>
     request(`/api/employees/${employeeNo}`, {

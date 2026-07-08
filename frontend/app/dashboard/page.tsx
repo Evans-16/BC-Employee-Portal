@@ -17,6 +17,28 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const s = (status || "").toLowerCase();
+  const config =
+    s === "active"
+      ? { dot: "bg-green-400",  text: "text-green-50",  bg: "bg-green-500/20",  border: "border-green-300/40" }
+      : s === "inactive"
+      ? { dot: "bg-amber-400",  text: "text-amber-50",  bg: "bg-amber-500/20",  border: "border-amber-300/40" }
+      : s === "terminated"
+      ? { dot: "bg-red-400",    text: "text-red-50",    bg: "bg-red-500/20",    border: "border-red-300/40" }
+      : { dot: "bg-gray-300",   text: "text-gray-50",   bg: "bg-white/10",      border: "border-white/20" };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 ${config.bg} ${config.border} border
+                  rounded-full px-3 py-1 text-xs font-semibold ${config.text}`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+      {status || "Unknown"}
+    </span>
+  );
+}
+
 export default function DashboardPage() {
   const { employee } = useAuth();
   if (!employee) return null;
@@ -41,21 +63,26 @@ export default function DashboardPage() {
           background: "linear-gradient(135deg, #1B3A6B 0%, #2563EB 100%)",
         }}
       >
-        <div className="flex items-center gap-4">
-          {/* Avatar */}
-          <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white/30
-                          flex items-center justify-center shrink-0">
-            <span className="font-bold text-lg text-white">{initials}</span>
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex items-center gap-4">
+            {/* Avatar — back to initials only */}
+            <div className="w-14 h-14 rounded-full bg-white/20 border-2 border-white/30
+                            flex items-center justify-center shrink-0">
+              <span className="font-bold text-lg text-white">{initials}</span>
+            </div>
+            <div>
+              <p className="text-blue-200 text-xs font-medium uppercase tracking-widest mb-0.5">
+                {greeting}
+              </p>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                {employee.firstName} {employee.lastName}
+              </h1>
+              <p className="text-blue-200 text-sm mt-0.5">{employee.jobTitle || "Cronus International Ltd. Staff"}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-blue-200 text-xs font-medium uppercase tracking-widest mb-0.5">
-              {greeting}
-            </p>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              {employee.firstName} {employee.lastName}
-            </h1>
-            <p className="text-blue-200 text-sm mt-0.5">{employee.jobTitle || "KNTC Staff"}</p>
-          </div>
+
+          {/* Active / inactive status */}
+          <StatusBadge status={employee.status} />
         </div>
       </div>
 
@@ -73,12 +100,14 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <InfoRow label="Employee No."  value={employee.employeeNo} />
-          <InfoRow label="First Name"    value={employee.firstName} />
-          <InfoRow label="Last Name"     value={employee.lastName} />
-          <InfoRow label="Job Title"     value={employee.jobTitle} />
-          <InfoRow label="Email"         value={employee.email} />
-          <InfoRow label="Phone"         value={employee.phoneNo} />
+          <InfoRow label="Employee No."     value={employee.employeeNo} />
+          <InfoRow label="First Name"       value={employee.firstName} />
+          <InfoRow label="Last Name"        value={employee.lastName} />
+          <InfoRow label="Gender"           value={employee.gender} />
+          <InfoRow label="Job Title"        value={employee.jobTitle} />
+          <InfoRow label="Employment Type"  value={employee.employmentType} />
+          <InfoRow label="Email"            value={employee.email} />
+          <InfoRow label="Phone"            value={employee.phoneNo} />
         </div>
 
         {/* ── Quick actions ──────────────────────────────────────── */}
